@@ -74,6 +74,58 @@ class TicTacToeGame(QMainWindow):
             if not game_finished and self.game_mode == "computer" and self.current_player == self.computer_player:
                 self.computer_move()
 
+    def get_win_lines(self):
+        return [
+            [(0, 0), (0, 1), (0, 2)],
+            [(1, 0), (1, 1), (1, 2)],
+            [(2, 0), (2, 1), (2, 2)],
+            [(0, 0), (1, 0), (2, 0)],
+            [(0, 1), (1, 1), (2, 1)],
+            [(0, 2), (1, 2), (2, 2)],
+            [(0, 0), (1, 1), (2, 2)],
+            [(0, 2), (1, 1), (2, 0)],
+        ]
+
+    def find_winning_move(self, player):
+        for line in self.get_win_lines():
+            cells = [self.buttons[row][col].text() for row, col in line]
+
+            if cells.count(player) == 2 and cells.count("") == 1:
+                empty_cell_index = cells.index("")
+                return line[empty_cell_index]
+
+        return None
+
+    def computer_move(self):
+        move = self.find_winning_move(self.computer_player)
+
+        if move is None:
+            move = self.find_winning_move(self.human_player)
+
+        if move is None:
+            priority_moves = [
+                (1, 1),
+                (0, 0),
+                (0, 2),
+                (2, 2),
+                (2, 0),
+                (0, 1),
+                (1, 2),
+                (2, 1),
+                (1, 0),
+            ]
+
+            for row, col in priority_moves:
+                if self.buttons[row][col].text() == "":
+                    move = (row, col)
+                    break
+
+        if move is not None:
+            row, col = move
+            self.buttons[row][col].setText(self.computer_player)
+            self.move_count += 1
+            self.check_winner()
+
     def check_winner(self):
         buts = self.buttons
         if buts[0][0].text() == buts[1][1].text() == buts[2][2].text() and buts[0][0].text() != "":
@@ -152,74 +204,7 @@ class TicTacToeGame(QMainWindow):
         self.ask_game_mode()
         self.update_turn_label()
 
-    def get_board(self):
-        return [[self.buttons[row][col].text() for col in range(3)] for row in range(3)]
-
-    def get_available_moves(self, board):
-        return [(row, col) for row in range(3) for col in range(3) if board[row][col] == ""]
-
-    def get_winner_for_board(self, board):
-        lines = []
-        lines.extend(board)
-        lines.extend([[board[row][col] for row in range(3)] for col in range(3)])
-        lines.append([board[i][i] for i in range(3)])
-        lines.append([board[i][2 - i] for i in range(3)])
-
-        for line in lines:
-            if line[0] != "" and line[0] == line[1] == line[2]:
-                return line[0]
-
-        if not self.get_available_moves(board):
-            return "draw"
-
-        return None
-
-    def minimax(self, board, is_maximizing):
-        result = self.get_winner_for_board(board)
-        if result == self.computer_player:
-            return 1
-        if result == self.human_player:
-            return -1
-        if result == "draw":
-            return 0
-
-        if is_maximizing:
-            best_score = -100
-            for row, col in self.get_available_moves(board):
-                board[row][col] = self.computer_player
-                score = self.minimax(board, False)
-                board[row][col] = ""
-                if score > best_score:
-                    best_score = score
-            return best_score
-
-        best_score = 100
-        for row, col in self.get_available_moves(board):
-            board[row][col] = self.human_player
-            score = self.minimax(board, True)
-            board[row][col] = ""
-            if score < best_score:
-                best_score = score
-        return best_score
-
-    def computer_move(self):
-        board = self.get_board()
-        best_score = -100
-        best_move = None
-
-        for row, col in self.get_available_moves(board):
-            board[row][col] = self.computer_player
-            score = self.minimax(board, False)
-            board[row][col] = ""
-            if score > best_score:
-                best_score = score
-                best_move = (row, col)
-
-        if best_move is not None:
-            row, col = best_move
-            self.buttons[row][col].setText(self.computer_player)
-            self.move_count += 1
-            self.check_winner()
+    
 
 
 if __name__ == "__main__":
