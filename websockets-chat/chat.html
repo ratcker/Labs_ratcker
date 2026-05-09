@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Chat</title>
+</head>
+<body>
+    <h1>Чат на WebSockets</h1>
+
+    <input type="text" id="messageInput" autocomplete="off">
+    <button id="sendButton" onclick="sendMessage()" disabled>Отправить</button>
+    <ul id="messages"></ul>
+
+<script>
+    const messages = document.getElementById("messages");
+    const sendButton = document.getElementById("sendButton");
+    const params = new URLSearchParams(location.search);
+    const username = params.get("username") || "";
+    const protocol = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${protocol}://${location.host}/ws?username=${encodeURIComponent(username)}`);
+
+    function addMessage(text) {
+        const message = document.createElement("li");
+        message.textContent = text;
+        messages.appendChild(message);
+    }
+
+    ws.onopen = function() {
+        sendButton.disabled = false;
+    };
+
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "error") {
+            addMessage(`Ошибка: ${data.detail}`);
+            return;
+        }
+
+        if (data.type === "private") {
+            addMessage(`[${data.ts}] private ${data.from} -> ${data.to}: ${data.text}`);
+            return;
+        }
+
+        if (data.type === "message") {
+            addMessage(`[${data.ts}] ${data.user}: ${data.text}`);
+        }
+    };
+
+    ws.onclose = function() {
+        sendButton.disabled = true;
+        addMessage("Соединение закрыто");
+    };
+
+    ws.onerror = function() {
+        addMessage("Ошибка WebSocket-соединения");
+    };
+
+    function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const text = input.value.trim();
+
+        if (text === "" || ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        ws.send(JSON.stringify({
+            type: "message",
+            text: text
+        }));
+        input.value = "";
+    }
+</script>
+</body>
+</html>
